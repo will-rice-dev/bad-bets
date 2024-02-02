@@ -1,7 +1,7 @@
 mod teams;
 
 use std::{error::Error, io};
-use chrono::NaiveDate;
+use chrono::{Duration, Local, NaiveDate};
 
 use teams::{validate_teams, Team};
 
@@ -55,6 +55,7 @@ pub struct Bet {
     pub bet_amount: f64,
     pub date_placed: NaiveDate,
     pub date_settled: NaiveDate,
+    pub won: Option<bool>,
 }
 
 impl Bet {
@@ -66,6 +67,7 @@ impl Bet {
         let bet_amount;
         let date_placed;
         let date_settled;
+        let won;
         
         loop {
             println!("Game, Over team wins, or Under team wins? (g, o, or u");
@@ -81,11 +83,11 @@ impl Bet {
         }
         loop {
             (team_for, team_against) = match bet_type {
-                BetType::FutureOver => (Some(get_team_from_cl("Team over?").unwrap()), None),
-                BetType::FutureUnder => (None, Some(get_team_from_cl("Team under?").unwrap())),
+                BetType::FutureOver => (Some(get_team_from_cli("Team over?").unwrap()), None),
+                BetType::FutureUnder => (None, Some(get_team_from_cli("Team under?").unwrap())),
                 BetType::HeadToHead => {
-                    let team1 = get_team_from_cl("Team betting on?").unwrap();
-                    let team2 = get_team_from_cl("Team betting against?").unwrap();
+                    let team1 = get_team_from_cli("Team betting on?").unwrap();
+                    let team2 = get_team_from_cli("Team betting against?").unwrap();
                     if !validate_teams(&team1, &team2) {
                         println!("Teams must be in same league for head to head games");
                         continue;
@@ -100,8 +102,17 @@ impl Bet {
             let mut odds_str: String = String::new();
             io::stdin().read_line(&mut odds_str)?;
             odds = match odds_str.trim().parse() {
-                Ok(num) => num,
-                Err(_) => continue,
+                Ok(num) =>  {
+                    if num >= -99 && num <= 99 {
+                        eprintln!("Odds cannot be between -99 and 99");
+                        continue;
+                    }
+                    num
+                }
+                Err(_) => {
+                    eprintln!("Odds must be interger");
+                    continue
+                },
             };
             break;
         }
@@ -115,17 +126,36 @@ impl Bet {
             };
             break;
         }
-        date_placed = get_date_from_cl("Date placed?").unwrap();
-        date_settled = get_date_from_cl("Date to be settled (or already settled)?").unwrap();
+        date_placed = get_date_from_cli("Date placed?").unwrap();
+        println!("");
+        date_settled = get_date_from_cli("Date to be settled (or already settled)?").unwrap();
+        println!("");
+        loop {
+            let current_date: NaiveDate = Local::now().date_naive();
+            let dif: Duration = current_date - date_settled;
+            if dif.num_seconds() > 0 {
+                println!("Did your bet win? (Y/n)");
+                let mut won_str = String::new();
+                io::stdin().read_line(&mut won_str)?;
+                match won_str.trim().to_lowercase().as_str() {
+                    "y" | "yes" => won = Some(true),
+                    "n" | "no" => won = Some(false),
+                    _ => continue,
+                }
+            } else {
+                won = None;
+            }
+            break;
+        }
         Ok(Bet {
-            bet_type, team_for, team_against, odds, bet_amount, date_placed, date_settled,
+            bet_type, team_for, team_against, odds, bet_amount, date_placed, date_settled, won
         })
     }
 
     
 }
 
-fn get_team_from_cl(message: &str) -> Result<Team, Box<dyn Error>> {
+fn get_team_from_cli(message: &str) -> Result<Team, Box<dyn Error>> {
     loop {
         println!("{}", message);
         let mut team: String = String::new();
@@ -137,31 +167,38 @@ fn get_team_from_cl(message: &str) -> Result<Team, Box<dyn Error>> {
     }
 }
 
-fn get_date_from_cl(message: &str) ->Result<NaiveDate, io::Error> {
+fn get_date_from_cli(message: &str) ->Result<NaiveDate, io::Error> {
     loop {
         println!("{}", message);
-        println!("Give date in mm/dd/yyyy format");
+        println!("Give date in mm/dd/yyyy or mm/dd/yy format");
         let mut date = String::new();
         io::stdin().read_line(&mut date)?;
         let mut date_split = date.trim().split('/');
         let month: u32 = match date_split.next().ok_or(get_invalid_date_error())?.parse() {
             Ok(num) => num,
             Err(_) => {
-                println!("Error parsing month");
+                eprintln!("Error parsing month");
                 continue;
             },
         };
         let day: u32 = match date_split.next().ok_or(get_invalid_date_error())?.parse() {
             Ok(num) => num,
             Err(_) => {
-                println!("Error parsing day");
+                eprintln!("Error parsing day");
                 continue;
             },
         };
         let year: i32 = match date_split.next().ok_or(get_invalid_date_error())?.parse() {
-            Ok(num) => num,
+            Ok(num) => match num {
+                0..=99 => num + 2000,
+                1900..=2100 => num,
+                _ => {
+                    eprintln!("Uhh year must be between 0 and 99 or 1900 and 2100. Honestly I probably shouldn't even let bets go to 2100");
+                    num
+                },
+            },
             Err(_) => {
-                println!("Error parsing day");
+                eprintln!("Error parsing day");
                 continue;
             },
         };

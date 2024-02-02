@@ -85,7 +85,7 @@ impl NFLTeam {
             "raiders" => Some(NFLTeam::Raiders),
             "eagles" => Some(NFLTeam::Eagles),
             "steelers" => Some(NFLTeam::Steelers),
-            "49ers" => Some(NFLTeam::Niners),
+            "niners" => Some(NFLTeam::Niners),
             "seahawks" => Some(NFLTeam::Seahawks),
             "buccaneers" => Some(NFLTeam::Buccaneers),
             "titans" => Some(NFLTeam::Titans),
