@@ -2,6 +2,7 @@ mod teams;
 
 use std::{error::Error, io};
 use chrono::{Duration, Local, NaiveDate};
+use serde::{Serialize, Deserialize};
 
 use teams::{validate_teams, Team};
 
@@ -39,14 +40,14 @@ impl Action {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum BetType {
     HeadToHead,
     FutureOver,
     FutureUnder,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Bet {
     pub bet_type: BetType,
     pub team_for: Option<Team>,
@@ -70,7 +71,7 @@ impl Bet {
         let won;
         
         loop {
-            println!("Game, Over team wins, or Under team wins? (g, o, or u");
+            println!("Game, Over team wins, or Under team wins? (g, o, or u)");
             let mut bet_type_str: String = String::new();
             io::stdin().read_line(&mut bet_type_str)?;
             match bet_type_str.trim().to_lowercase().as_str() {

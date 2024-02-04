@@ -1,5 +1,7 @@
+use serde::{Deserialize, Serialize};
+
 // Define an enum for NBA teams
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum NBATeam {
     Hawks, Celtics, Nets, Hornets, Bulls, Cavaliers, Mavericks, Nuggets, Pistons, Warriors,
     Rockets, Pacers, Clippers, Lakers, Grizzlies, Heat, Bucks, Timberwolves, Pelicans, Knicks,
@@ -10,8 +12,8 @@ pub enum NBATeam {
 impl NBATeam {
     fn from_str(name: &str) -> Option<NBATeam> {
         match name.to_lowercase().as_str() {
-            "hawks" => Some(NBATeam::Hawks),
-            "celtics" => Some(NBATeam::Celtics),
+            "hawks" | "atlanta" => Some(NBATeam::Hawks),
+            "celtics" | "boston" => Some(NBATeam::Celtics),
             "nets" => Some(NBATeam::Nets),
             "hornets" => Some(NBATeam::Hornets),
             "bulls" => Some(NBATeam::Bulls),
@@ -46,7 +48,7 @@ impl NBATeam {
 }
 
 // Define an enum for NFL teams
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum NFLTeam {
     Cardinals, Falcons, Ravens, Bills, Panthers, Bears, Bengals, Browns, Cowboys, Broncos,
     Lions, Packers, Texans, Colts, Jaguars, Chiefs, Chargers, Rams, Dolphins, Vikings,
@@ -96,7 +98,7 @@ impl NFLTeam {
 }
 
 // Define a generic enum for sports teams
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub enum Team {
     NBA(NBATeam),
     NFL(NFLTeam),

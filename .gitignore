@@ -21,3 +21,6 @@ Cargo.lock
 # Added by editor and MacOS
 .DS_Store
 .vscode/
+
+# Project specific files
+temp.json
