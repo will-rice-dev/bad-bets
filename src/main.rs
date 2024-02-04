@@ -1,3 +1,4 @@
+use std::collections::BinaryHeap;
 use std::env;
 use std::error::Error;
 use std::fs;
@@ -16,7 +17,11 @@ fn main() -> Result<(), Box<dyn Error>>{
 
     let mut profile: Profile = match config.is_new {
         true => Profile::new_from_cli().unwrap_or(
-            Profile {name: "Error creating name".to_string(), bets_outstanding: vec![], bets_settled: vec![]}
+            Profile {
+                                name: "Error creating name".to_string(),
+                                bets_outstanding: BinaryHeap::new(),
+                                bets_settled: BinaryHeap::new()
+                            }
         ),
         false => {
             let bets_str = fs::read_to_string(config.file_path).unwrap_or_else(|err| {

@@ -1,6 +1,6 @@
 mod teams;
 
-use std::{error::Error, io};
+use std::{cmp::Ordering, collections::BinaryHeap, error::Error, io};
 use chrono::{Local, NaiveDate};
 use serde::{Serialize, Deserialize};
 
@@ -10,8 +10,8 @@ const SECONDS_IN_DAY: i64 = 86400; // Want to give enough time for
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Profile {
-    pub bets_settled: Vec<Bet>,
-    pub bets_outstanding: Vec<Bet>,
+    pub bets_settled: BinaryHeap<Bet>,
+    pub bets_outstanding: BinaryHeap<Bet>,
     pub name: String,
 }
 
@@ -20,7 +20,7 @@ impl Profile {
         let mut name = String::new();
         println!("Welcome newcomer! What is your name?");
         io::stdin().read_line(&mut name)?;
-        Ok(Profile { name, bets_outstanding: vec![], bets_settled: vec![]})
+        Ok(Profile { name: name.trim().to_string(), bets_outstanding: BinaryHeap::new(), bets_settled: BinaryHeap::new()})
 
     }
 
@@ -76,14 +76,14 @@ impl Action {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub enum BetType {
     HeadToHead,
     FutureOver,
     FutureUnder,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub struct Bet {
     pub bet_type: BetType,
     pub team_for: Option<Team>,
@@ -190,6 +190,20 @@ impl Bet {
         })
     }
 
+}
+
+impl Eq for Bet {}
+
+impl Ord for Bet {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let dif = self.date_settled - other.date_settled;
+        if dif.num_seconds() < 0 {
+            return Ordering::Less
+        } else if dif.num_seconds() > 0 {
+            return Ordering::Greater
+        }
+        Ordering::Equal
+    }
 }
 
 fn get_team_from_cli(message: &str) -> Result<Team, Box<dyn Error>> {

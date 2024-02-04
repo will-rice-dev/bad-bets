@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 // Define an enum for NBA teams
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub enum NBATeam {
     Hawks, Celtics, Nets, Hornets, Bulls, Cavaliers, Mavericks, Nuggets, Pistons, Warriors,
     Rockets, Pacers, Clippers, Lakers, Grizzlies, Heat, Bucks, Timberwolves, Pelicans, Knicks,
@@ -48,7 +48,7 @@ impl NBATeam {
 }
 
 // Define an enum for NFL teams
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub enum NFLTeam {
     Cardinals, Falcons, Ravens, Bills, Panthers, Bears, Bengals, Browns, Cowboys, Broncos,
     Lions, Packers, Texans, Colts, Jaguars, Chiefs, Chargers, Rams, Dolphins, Vikings,
@@ -98,7 +98,7 @@ impl NFLTeam {
 }
 
 // Define a generic enum for sports teams
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Team {
     NBA(NBATeam),
     NFL(NFLTeam),
