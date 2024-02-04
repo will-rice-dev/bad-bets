@@ -8,15 +8,18 @@ use teams::{validate_teams, Team};
 
 pub struct Config {
     pub file_path: String,
+    pub is_new: bool,
 }
 
 impl Config {
-    pub fn new(args: &[String]) -> Result<Config, &'static str> {
-        if args.len() != 2  {
-            return Err("No file path given");
+    pub fn new_from_cli(args: &[String]) -> Config {
+        if args.len() == 2  {
+            let file_path = args[1].clone();
+            return Config { file_path, is_new: false }
         }
-        let file_path = args[1].clone();
-        Ok(Config { file_path })
+        println!("Creating new profile. Will save to temp.json");
+        let file_path = String::from("temp.json");
+        Config {file_path, is_new: true}
     }
 }
 

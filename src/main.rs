@@ -11,16 +11,19 @@ use bad_bets::Config;
 fn main() -> Result<(), Box<dyn Error>>{
     let args: Vec<String> = env::args().collect();
     println!("Welcome to Bad Bets!");
-    let config = Config::new(&args).unwrap_or_else(|err| {
-        eprintln!("Problem parsing arguments: {err}");
-        process::exit(1);
-    });
+    let config = Config::new_from_cli(&args);
 
-    let bets_str = fs::read_to_string(config.file_path).unwrap_or_else(|err| {
-        eprintln!("Problem reading file: {}", err.to_string() );
-        process::exit(1);
-    });
-    let mut bets: Vec<Bet> = serde_json::from_str(&bets_str)?;
+    let mut bets: Vec<Bet> = match config.is_new {
+        true => vec![],
+        false => {
+            let bets_str = fs::read_to_string(config.file_path).unwrap_or_else(|err| {
+                eprintln!("Problem reading file: {}", err.to_string() );
+                process::exit(1);
+            });
+            serde_json::from_str(&bets_str)?
+        }
+    };
+    
 
     loop {
         println!("Please input your action (Add, List, Settle, Quit):");
