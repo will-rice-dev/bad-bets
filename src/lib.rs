@@ -24,18 +24,27 @@ impl Profile {
 
     }
 
-    pub fn get_outstanding_bets(&self) -> Option<Vec<Bet>> {
+    /**
+     * Returns the bets that have been entered but not marked as won or lost
+     * Indicates whether the bet is settling today with a bool per Bet.
+     */
+    pub fn get_settleable_bets(&self) -> Option<Vec<(&Bet, bool)>> {
         let current_date: NaiveDate = Local::now().date_naive();
-        let mut outstanding_bets = vec![];
+        let mut settleable_bets: Vec<(&Bet, bool)> = vec![];
         for bet in &self.bets_outstanding {
-            if bet.won.is_some() { continue; }
             let dif = current_date - bet.date_settled;
             if dif.num_seconds() > SECONDS_IN_DAY {
-                outstanding_bets.push(bet);
+                settleable_bets.push((bet, false));
+            } else if dif.num_seconds() > 0 {
+                settleable_bets.push((bet, true));
+            } else {
+                break;
             }
         }
-        
-        None
+        if settleable_bets.len() == 0 {
+            return None
+        }
+        Some(settleable_bets)
     }
 }
 
