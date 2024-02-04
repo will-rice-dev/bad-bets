@@ -1,10 +1,43 @@
 mod teams;
 
 use std::{error::Error, io};
-use chrono::{Duration, Local, NaiveDate};
+use chrono::{Local, NaiveDate};
 use serde::{Serialize, Deserialize};
 
 use teams::{validate_teams, Team};
+
+const SECONDS_IN_DAY: i64 = 86400; // Want to give enough time for 
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Profile {
+    pub bets_settled: Vec<Bet>,
+    pub bets_outstanding: Vec<Bet>,
+    pub name: String,
+}
+
+impl Profile {
+    pub fn new_from_cli() -> Result<Profile, Box<dyn Error>> {
+        let mut name = String::new();
+        println!("Welcome newcomer! What is your name?");
+        io::stdin().read_line(&mut name)?;
+        Ok(Profile { name, bets_outstanding: vec![], bets_settled: vec![]})
+
+    }
+
+    pub fn get_outstanding_bets(&self) -> Option<Vec<Bet>> {
+        let current_date: NaiveDate = Local::now().date_naive();
+        let mut outstanding_bets = vec![];
+        for bet in &self.bets_outstanding {
+            if bet.won.is_some() { continue; }
+            let dif = current_date - bet.date_settled;
+            if dif.num_seconds() > SECONDS_IN_DAY {
+                outstanding_bets.push(bet);
+            }
+        }
+        
+        None
+    }
+}
 
 pub struct Config {
     pub file_path: String,
@@ -63,7 +96,7 @@ pub struct Bet {
 }
 
 impl Bet {
-    pub fn create_from_cl() -> Result<Bet, Box<dyn Error>>{
+    pub fn create_from_cli() -> Result<Bet, Box<dyn Error>>{
         let bet_type;
         let team_for;
         let team_against;
@@ -134,10 +167,10 @@ impl Bet {
         println!("");
         date_settled = get_date_from_cli("Date to be settled (or already settled)?").unwrap();
         println!("");
-        loop {
+        /* loop {
             let current_date: NaiveDate = Local::now().date_naive();
             let dif: Duration = current_date - date_settled;
-            if dif.num_seconds() > 0 {
+            if dif.num_seconds() > SECONDS_IN_DAY {
                 println!("Did your bet win? (Y/n)");
                 let mut won_str = String::new();
                 io::stdin().read_line(&mut won_str)?;
@@ -150,13 +183,13 @@ impl Bet {
                 won = None;
             }
             break;
-        }
+        } */
+        won = None;
         Ok(Bet {
             bet_type, team_for, team_against, odds, bet_amount, date_placed, date_settled, won
         })
     }
 
-    
 }
 
 fn get_team_from_cli(message: &str) -> Result<Team, Box<dyn Error>> {

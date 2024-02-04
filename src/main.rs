@@ -7,14 +7,17 @@ use std::io;
 use bad_bets::Action;
 use bad_bets::Bet;
 use bad_bets::Config;
+use bad_bets::Profile;
 
 fn main() -> Result<(), Box<dyn Error>>{
     let args: Vec<String> = env::args().collect();
     println!("Welcome to Bad Bets!");
     let config = Config::new_from_cli(&args);
 
-    let mut bets: Vec<Bet> = match config.is_new {
-        true => vec![],
+    let mut profile: Profile = match config.is_new {
+        true => Profile::new_from_cli().unwrap_or(
+            Profile {name: "Error creating name".to_string(), bets_outstanding: vec![], bets_settled: vec![]}
+        ),
         false => {
             let bets_str = fs::read_to_string(config.file_path).unwrap_or_else(|err| {
                 eprintln!("Problem reading file: {}", err.to_string() );
@@ -23,7 +26,6 @@ fn main() -> Result<(), Box<dyn Error>>{
             serde_json::from_str(&bets_str)?
         }
     };
-    
 
     loop {
         println!("Please input your action (Add, List, Settle, Quit):");
@@ -35,7 +37,13 @@ fn main() -> Result<(), Box<dyn Error>>{
             Action::Continue => continue,
             Action::Quit => break,
             Action::AddBet => {
-                bets.push(Bet::create_from_cl()?);
+                let new_bet = Bet::create_from_cli()?;
+                if new_bet.won.is_some() {
+                    profile.bets_settled.push(new_bet);
+                } else {
+                    profile.bets_outstanding.push(new_bet);
+                }
+                
             },
             _ => continue,
         }
@@ -46,7 +54,7 @@ fn main() -> Result<(), Box<dyn Error>>{
     io::stdin().read_line(&mut save)?;
     match save.trim().to_lowercase().as_str() {
         "y" | "yes" => {
-            let json = serde_json::to_string(&bets)?;
+            let json = serde_json::to_string(&profile)?;
             fs::write("temp.json", json)?;
         }
         _ => ()
