@@ -6,7 +6,7 @@ use serde::{Serialize, Deserialize};
 
 pub use teams::Team;
 
-const SECONDS_IN_DAY: i64 = 86400; // Want to give enough time for 
+pub const SECONDS_IN_DAY: i64 = 86400; // Want to give enough time for 
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Profile {
@@ -68,7 +68,7 @@ impl Action {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub enum BetType {
     HeadToHead,
     FutureOver,

@@ -4,10 +4,10 @@ use std::{error::Error, io};
 
 use bad_bets::{Action, Profile, Team};
 use bad_bets::{Bet, BetType};
-use chrono::NaiveDate;
+use chrono::{Local, NaiveDate};
 
 pub fn main() -> Result<(), Box<dyn Error>> {
-    println!("Welcome to Bad Bets!");
+    println!("Welcome to Bad Bets?");
     let args: Vec<String> = std::env::args().collect();
     let config = Config::new_from_cli(&args);
 
@@ -63,7 +63,8 @@ pub fn main() -> Result<(), Box<dyn Error>> {
                 }
                 
             },
-            _ => continue,
+            Action::SettleBets => settle_bets_cli(&mut profile)?,
+            Action::ListBets => println!("{}", list_bets(&profile)),
         }
     }
 
@@ -97,7 +98,80 @@ impl Config {
     }
 }
 
-pub fn create_bet_from_cli() -> Result<Bet, Box<dyn Error>>{
+fn list_bets(profile: &Profile) -> String {
+    let mut out = String::from("Outstanding Bets\n");
+    out.push_str(serde_json::to_string_pretty(&profile.bets_outstanding)
+                                    .unwrap_or("None".to_string()).as_str());
+    out.push_str("\nSettled Bets\n");
+    out.push_str(serde_json::to_string_pretty(&profile.bets_settled)
+                                    .unwrap_or("None".to_string()).as_str());
+    out
+}
+
+fn settle_bets_cli(profile: &mut Profile) -> Result<(), Box<dyn Error>> {
+    let current_date: NaiveDate = Local::now().date_naive();
+    loop {
+        let bet = profile.bets_outstanding.peek();
+        if bet.is_none() {
+            break;
+        }
+        let bet = bet.unwrap();
+        let dif = current_date - bet.date_settled;
+        let is_today;
+        if dif.num_seconds() > bad_bets::SECONDS_IN_DAY {
+            is_today = false;
+        } else if dif.num_seconds() > 0 {
+            is_today = true;
+        } else {
+            println!("No more bets to settle!\n");
+            break;
+        }
+        if is_today {
+            if yes_or_no(format!("Has this bet settled yet: {:?}", bet).as_str())? {
+                if yes_or_no("Did the bet win?")? {
+                    profile.bets_settled.push(Bet {
+                        won: Some(true),
+                        ..*bet
+                    });
+                } else {
+                    profile.bets_settled.push(Bet {
+                        won: Some(false),
+                        ..*bet
+                    });
+                }
+            } else {
+                println!("No more bets to settle!"); // TODO: This is not always true so reformat
+                return Ok(())
+            }
+        } else {
+            if yes_or_no(format!("Did this bet win: {:?}", bet).as_str())? {
+                profile.bets_settled.push(Bet {
+                    won: Some(true),
+                    ..*bet
+                });
+            } else {
+                profile.bets_settled.push(Bet {
+                    won: Some(false),
+                    ..*bet
+                });
+            }
+        }
+        profile.bets_outstanding.pop();
+    }
+    Ok(())
+}
+
+fn yes_or_no(message: &str) -> Result<bool, Box<dyn Error>>{
+    println!("{} (Y/n)", message);
+    let mut ans = String::new();
+    io::stdin().read_line(&mut ans)?;
+    match ans.to_lowercase().trim() {
+        "y" | "yes" => return Ok(true),
+        _ => return Ok(false),
+    }
+}
+
+fn create_bet_from_cli() -> Result<Bet, Box<dyn Error>>{
     let bet_type;
     let team_for;
     let team_against;
@@ -207,10 +281,14 @@ fn get_team_from_cli(message: &str) -> Result<Team, Box<dyn Error>> {
 fn get_date_from_cli(message: &str) ->Result<NaiveDate, io::Error> {
     loop {
         println!("{}", message);
-        println!("Give date in mm/dd/yyyy or mm/dd/yy format");
+        println!("Give date in mm/dd/yyyy or mm/dd/yy format (or enter t for today's date)");
         let mut date = String::new();
         io::stdin().read_line(&mut date)?;
-        let mut date_split = date.trim().split('/');
+        date = date.trim().to_lowercase();
+        if date == "t" || date == "today" {
+            return Ok(Local::now().date_naive());
+        }
+        let mut date_split = date.split('/');
         let month: u32 = match date_split.next().ok_or(get_invalid_date_error())?.parse() {
             Ok(num) => num,
             Err(_) => {
