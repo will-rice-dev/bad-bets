@@ -1,6 +1,19 @@
 
-use std::error::Error;
+use axum::{response::Html, routing::get, Router};
 
-fn main() -> Result<(), Box<dyn Error>>{
-    Ok(())
+#[tokio::main]
+async fn main() {
+    // build our application with a route
+    let app = Router::new().route("/", get(handler));
+
+    // run it
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:8000")
+        .await
+        .unwrap();
+    println!("listening on {}", listener.local_addr().unwrap());
+    axum::serve(listener, app).await.unwrap();
+}
+
+async fn handler() -> Html<&'static str> {
+    Html("<h1>Hello, World!</h1>")
 }
