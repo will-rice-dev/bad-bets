@@ -2,18 +2,18 @@ use std::collections::BinaryHeap;
 use std::{fs, process};
 use std::{error::Error, io};
 
-use bad_bets::{Action, Profile, Team};
+use bad_bets::{Action, User, Team};
 use bad_bets::{Bet, BetType};
 use chrono::{Local, NaiveDate};
 
 pub fn main() -> Result<(), Box<dyn Error>> {
     println!("Welcome to Bad Bets?");
     let args: Vec<String> = std::env::args().collect();
-    let config = Config::new_from_cli(&args);
+    let config = CliConfig::new_from_cli(&args);
 
-    let mut profile: Profile = match config.is_new {
-        true => Profile::new_from_cli().unwrap_or(
-            Profile {
+    let mut user: User = match config.is_new {
+        true => new_from_cli().unwrap_or(
+            User {
                                 name: "Error creating name".to_string(),
                                 bets_outstanding: BinaryHeap::new(),
                                 bets_settled: BinaryHeap::new()
@@ -30,12 +30,12 @@ pub fn main() -> Result<(), Box<dyn Error>> {
                         println!("Name?");
                         let mut new_name = String::new();
                         io::stdin().read_line(&mut new_name).unwrap();
-                        let new_profile = Profile {
+                        let new_user = User {
                             name: new_name,
                             bets_outstanding: BinaryHeap::new(),
                             bets_settled: BinaryHeap::new()
                         };
-                        serde_json::to_string(&new_profile).unwrap()
+                        serde_json::to_string(&new_user).unwrap()
                     }
                     _ => process::exit(1),
                 }
@@ -57,14 +57,14 @@ pub fn main() -> Result<(), Box<dyn Error>> {
             Action::AddBet => {
                 let new_bet = create_bet_from_cli()?;
                 if new_bet.won.is_some() {
-                    profile.bets_settled.push(new_bet);
+                    user.bets_settled.push(new_bet);
                 } else {
-                    profile.bets_outstanding.push(new_bet);
+                    user.bets_outstanding.push(new_bet);
                 }
                 
             },
-            Action::SettleBets => settle_bets_cli(&mut profile)?,
-            Action::ListBets => println!("{}", list_bets(&profile)),
+            Action::SettleBets => settle_bets_cli(&mut user)?,
+            Action::ListBets => println!("{}", list_bets(&user)),
         }
     }
 
@@ -73,7 +73,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
     io::stdin().read_line(&mut save)?;
     match save.trim().to_lowercase().as_str() {
         "y" | "yes" => {
-            let json = serde_json::to_string(&profile)?;
+            let json = serde_json::to_string(&user)?;
             fs::write(&config.file_path, json)?;
         }
         _ => ()
@@ -81,46 +81,55 @@ pub fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-pub struct Config {
+pub struct CliConfig {
     pub file_path: String,
     pub is_new: bool,
 }
 
-impl Config {
-    pub fn new_from_cli(args: &[String]) -> Config {
+impl CliConfig {
+    pub fn new_from_cli(args: &[String]) -> CliConfig {
         if args.len() == 2  {
             let file_path = args[1].clone();
-            return Config { file_path, is_new: false }
+            return CliConfig { file_path, is_new: false }
         }
-        println!("Creating new profile. Will save to temp.json");
+        println!("Creating new user profile. Will save to temp.json");
         let file_path = String::from("temp.json");
-        Config {file_path, is_new: true}
+        CliConfig {file_path, is_new: true}
     }
 }
 
-fn list_bets(profile: &Profile) -> String {
+fn new_from_cli() -> Result<User, Box<dyn Error>> {
+    let mut name = String::new();
+    println!("Welcome newcomer! What is your name?");
+    io::stdin().read_line(&mut name)?;
+    Ok(User { name: name.trim().to_string(), bets_outstanding: BinaryHeap::new(), bets_settled: BinaryHeap::new()})
+}
+
+fn list_bets(user: &User) -> String {
     let mut out = String::from("Outstanding Bets\n");
-    out.push_str(serde_json::to_string_pretty(&profile.bets_outstanding)
+    out.push_str(serde_json::to_string_pretty(&user.bets_outstanding)
                                     .unwrap_or("None".to_string()).as_str());
     out.push_str("\nSettled Bets\n");
-    out.push_str(serde_json::to_string_pretty(&profile.bets_settled)
+    out.push_str(serde_json::to_string_pretty(&user.bets_settled)
                                     .unwrap_or("None".to_string()).as_str());
     out
 }
 
-fn settle_bets_cli(profile: &mut Profile) -> Result<(), Box<dyn Error>> {
+fn settle_bets_cli(user: &mut User) -> Result<(), Box<dyn Error>> {
     let current_date: NaiveDate = Local::now().date_naive();
     loop {
-        let bet = profile.bets_outstanding.peek();
+        let bet = user.bets_outstanding.peek();
         if bet.is_none() {
             break;
         }
         let bet = bet.unwrap();
         let dif = current_date - bet.date_settled;
         let is_today;
+        println!("{:?}", user.bets_outstanding);
+        println!("{:?}", dif.num_days());
         if dif.num_seconds() > bad_bets::SECONDS_IN_DAY {
             is_today = false;
-        } else if dif.num_seconds() > 0 {
+        } else if dif.num_seconds() >= 0 {
             is_today = true;
         } else {
             println!("No more bets to settle!\n");
@@ -129,12 +138,12 @@ fn settle_bets_cli(profile: &mut Profile) -> Result<(), Box<dyn Error>> {
         if is_today {
             if yes_or_no(format!("Has this bet settled yet: {:?}", bet).as_str())? {
                 if yes_or_no("Did the bet win?")? {
-                    profile.bets_settled.push(Bet {
+                    user.bets_settled.push(Bet {
                         won: Some(true),
                         ..*bet
                     });
                 } else {
-                    profile.bets_settled.push(Bet {
+                    user.bets_settled.push(Bet {
                         won: Some(false),
                         ..*bet
                     });
@@ -145,18 +154,18 @@ fn settle_bets_cli(profile: &mut Profile) -> Result<(), Box<dyn Error>> {
             }
         } else {
             if yes_or_no(format!("Did this bet win: {:?}", bet).as_str())? {
-                profile.bets_settled.push(Bet {
+                user.bets_settled.push(Bet {
                     won: Some(true),
                     ..*bet
                 });
             } else {
-                profile.bets_settled.push(Bet {
+                user.bets_settled.push(Bet {
                     won: Some(false),
                     ..*bet
                 });
             }
         }
-        profile.bets_outstanding.pop();
+        user.bets_outstanding.pop();
     }
     Ok(())
 }
@@ -210,7 +219,7 @@ fn create_bet_from_cli() -> Result<Bet, Box<dyn Error>>{
         break;
     }
     loop {
-        println!("Odds? (Use American odds ie -110 or 200");
+        println!("Odds? (Use American odds ie -110 or 200)");
         let mut odds_str: String = String::new();
         io::stdin().read_line(&mut odds_str)?;
         odds = match odds_str.trim().parse() {

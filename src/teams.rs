@@ -12,8 +12,8 @@ pub enum NBATeam {
 impl NBATeam {
     fn from_str(name: &str) -> Option<NBATeam> {
         match name.to_lowercase().as_str() {
-            "hawks" | "atlanta" => Some(NBATeam::Hawks),
-            "celtics" | "boston" => Some(NBATeam::Celtics),
+            "hawks" => Some(NBATeam::Hawks),
+            "celtics" => Some(NBATeam::Celtics),
             "nets" => Some(NBATeam::Nets),
             "hornets" => Some(NBATeam::Hornets),
             "bulls" => Some(NBATeam::Bulls),
